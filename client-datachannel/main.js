@@ -1,4 +1,3 @@
-
 // Define "global" variables
 
 // UI variables
@@ -13,14 +12,14 @@ var uuid;
 var serverConnection;
 
 // RTC Variables!!
-var peerConnection = null;  // RTCPeerConnection
-var dataChannel = null;     // RTCDataChannel
+var peerConnection = null; // RTCPeerConnection
+var dataChannel = null; // RTCDataChannel
 
 var peerConnectionConfig = {
-  'iceServers': [
-    { 'urls': 'stun:stun.stunprotocol.org:3478' },
-    { 'urls': 'stun:stun.l.google.com:19302' },
-  ]
+  iceServers: [
+    { urls: "stun:stun.stunprotocol.org:3478" },
+    { urls: "stun:stun.l.google.com:19302" },
+  ],
 };
 
 // Functions
@@ -29,30 +28,32 @@ var peerConnectionConfig = {
 
 function startup() {
   // Get the local UI elements ready
-  connectButton = document.getElementById('connectButton');
-  disconnectButton = document.getElementById('disconnectButton');
-  sendButton = document.getElementById('sendButton');
-  messageInputBox = document.getElementById('message');
-  receiveBox = document.getElementById('receivebox');
+  connectButton = document.getElementById("connectButton");
+  disconnectButton = document.getElementById("disconnectButton");
+  sendButton = document.getElementById("sendButton");
+  messageInputBox = document.getElementById("message");
+  receiveBox = document.getElementById("receivebox");
 
   // Set event listeners for user interface widgets
 
-  connectButton.addEventListener('click', connect, false);
-  disconnectButton.addEventListener('click', disconnectPeers, false);
-  sendButton.addEventListener('click', sendMessageThroughDataChannel, false);
+  connectButton.addEventListener("click", connect, false);
+  disconnectButton.addEventListener("click", disconnectPeers, false);
+  sendButton.addEventListener("click", sendMessageThroughDataChannel, false);
 
   // And set up connection to our websocket signalling server
 
   uuid = createUUID();
 
-  serverConnection = new WebSocket('wss://' + window.location.hostname + ':8443');
+  serverConnection = new WebSocket(
+    "wss://" + window.location.hostname + ":8443"
+  );
   serverConnection.onmessage = gotMessageFromServer;
 }
 
 // Called when we initiate the connection
 
 function connect() {
-  console.log('connect');
+  console.log("connect");
   start(true);
 }
 
@@ -77,12 +78,17 @@ function start(isCaller) {
 
   // Kick it off (if we're the caller)
   if (isCaller) {
-    peerConnection.createOffer()
-        .then(offer => peerConnection.setLocalDescription(offer))
-        .then(() => console.log('set local offer description'))
-        .then(() => serverConnection.send(JSON.stringify({ 'sdp': peerConnection.localDescription, 'uuid': uuid })))
-        .then(() => console.log('sent offer description to remote'))
-        .catch(errorHandler);
+    peerConnection
+      .createOffer()
+      .then((offer) => peerConnection.setLocalDescription(offer))
+      .then(() => console.log("set local offer description"))
+      .then(() =>
+        serverConnection.send(
+          JSON.stringify({ sdp: peerConnection.localDescription, uuid: uuid })
+        )
+      )
+      .then(() => console.log("sent offer description to remote"))
+      .catch(errorHandler);
   }
 }
 
@@ -98,45 +104,55 @@ function gotMessageFromServer(message) {
   // Ignore messages from ourself
   if (signal.uuid == uuid) return;
 
-  console.log('signal: ' + message.data);
+  console.log("signal: " + message.data);
 
   if (signal.sdp) {
-    peerConnection.setRemoteDescription(new RTCSessionDescription(signal.sdp))
-      .then(() => console.log('set remote description'))
+    peerConnection
+      .setRemoteDescription(new RTCSessionDescription(signal.sdp))
+      .then(() => console.log("set remote description"))
       .then(function () {
         // Only create answers in response to offers
-        if (signal.sdp.type == 'offer') {
-          console.log('got offer');
+        if (signal.sdp.type == "offer") {
+          console.log("got offer");
 
-          peerConnection.createAnswer()
-            .then(answer => peerConnection.setLocalDescription(answer))
-            .then(() => console.log('set local answer description'))
-            .then(() => serverConnection.send(JSON.stringify({ 'sdp': peerConnection.localDescription, 'uuid': uuid })))
-            .then(() => console.log('sent answer description to remote'))
+          peerConnection
+            .createAnswer()
+            .then((answer) => peerConnection.setLocalDescription(answer))
+            .then(() => console.log("set local answer description"))
+            .then(() =>
+              serverConnection.send(
+                JSON.stringify({
+                  sdp: peerConnection.localDescription,
+                  uuid: uuid,
+                })
+              )
+            )
+            .then(() => console.log("sent answer description to remote"))
             .catch(errorHandler);
         }
       })
       .catch(errorHandler);
   } else if (signal.ice) {
-    console.log('received ice candidate from remote');
-    peerConnection.addIceCandidate(new RTCIceCandidate(signal.ice))
-      .then(() => console.log('added ice candidate'))
+    console.log("received ice candidate from remote");
+    peerConnection
+      .addIceCandidate(new RTCIceCandidate(signal.ice))
+      .then(() => console.log("added ice candidate"))
       .catch(errorHandler);
   }
 }
 
 function gotIceCandidate(event) {
   if (event.candidate != null) {
-    console.log('got ice candidate');
-    serverConnection.send(JSON.stringify({ 'ice': event.candidate, 'uuid': uuid }))
-    console.log('sent ice candiate to remote');
+    console.log("got ice candidate");
+    serverConnection.send(JSON.stringify({ ice: event.candidate, uuid: uuid }));
+    console.log("sent ice candiate to remote");
   }
 }
 
 // Called when we are not the caller (ie we are the receiver)
 // and the data channel has been opened
 function handleDataChannelCreated(event) {
-  console.log('dataChannel opened');
+  console.log("dataChannel opened");
 
   dataChannel = event.channel;
   dataChannel.onmessage = handleDataChannelReceiveMessage;
@@ -201,7 +217,6 @@ function handleDataChannelReceiveMessage(event) {
 // Also update the UI to reflect the disconnected status.
 
 function disconnectPeers() {
-
   // Close the RTCDataChannel if it's open.
 
   dataChannel.close();
@@ -231,8 +246,23 @@ function errorHandler(error) {
 // Strictly speaking, it's not a real UUID, but it gets the job done here
 function createUUID() {
   function s4() {
-    return Math.floor((1 + Math.random()) * 0x10000).toString(16).substring(1);
+    return Math.floor((1 + Math.random()) * 0x10000)
+      .toString(16)
+      .substring(1);
   }
 
-  return s4() + s4() + '-' + s4() + '-' + s4() + '-' + s4() + '-' + s4() + s4() + s4();
+  return (
+    s4() +
+    s4() +
+    "-" +
+    s4() +
+    "-" +
+    s4() +
+    "-" +
+    s4() +
+    "-" +
+    s4() +
+    s4() +
+    s4()
+  );
 }
